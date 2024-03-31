@@ -26,11 +26,17 @@ async def async_llm_request(
         required_tool=request.required_tool
     )
     raw_response = await async_litellm_request(
-        session.model,
+        session.model.ssl_verify,
+        session.model.name,
+        session.model.max_retries,
+        session.model.api_key,
         messages,
         tools.openapi_json(),
         tool_choice,
-        verbose=session.verbose
+        verbose=session.verbose,
+        headers=session.model.headers,
+        organization=session.model.organization,
+        api_base=session.model.api_base
     )
     response = extract_response_messages(raw_response, tools)
 
@@ -64,11 +70,17 @@ def llm_request(
         required_tool=request.required_tool
     )
     raw_response = litellm_request(
-        session.model,
+        session.model.ssl_verify,
+        session.model.name,
+        session.model.max_retries,
+        session.model.api_key,
         messages,
         tools.openapi_json(),
         tool_choice,
-        verbose=session.verbose
+        verbose=session.verbose,
+        headers=session.model.headers,
+        organization=session.model.organization,
+        api_base=session.model.api_base
     )
     response = extract_response_messages(raw_response, tools)
 
