@@ -28,7 +28,8 @@ jobs:
     steps:
     - name: Check Envs
       run: |
-        echo $OPENAI_API_KEY
+        echo ${#OPENAI_API_KEY}
+        echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
