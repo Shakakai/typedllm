@@ -1,5 +1,4 @@
-from typing import Type, List
-
+from typing import Type
 from typedllm import TypedPrompt, LLMSession, LLMRequest
 from typedllm.langchain import execute_request
 
