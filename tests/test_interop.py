@@ -21,7 +21,7 @@ async def test_basic_litellm_request(model: LLMModel, monkeypatch: pytest.Monkey
     ]
     tools = []
     tool_choice = {}
-    verbose = False
+    verbose = True
 
     response = await async_litellm_request(
         model.ssl_verify,
@@ -44,7 +44,7 @@ async def test_no_msg_error(openai_key: str, model: LLMModel):
     messages = []
     tools = []
     tool_choice = {}
-    verbose = False
+    verbose = True
 
     with pytest.raises(ValueError):
         await async_litellm_request(
