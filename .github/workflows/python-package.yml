@@ -18,6 +18,8 @@ jobs:
     environment:
       name: release
       url: https://pypi.org/p/typedllm
+    env:
+      OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
     strategy:
       fail-fast: false
       matrix:

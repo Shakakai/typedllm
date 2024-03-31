@@ -47,7 +47,7 @@ def pre_request_setup(
     if verbose:
         litellm.set_verbose = True
 
-    if headers:
+    if headers is not None:
         litellm.headers = headers
 
 
@@ -59,7 +59,7 @@ def post_request_cleanup(
     if not ssl_verify:
         litellm.client_session = None  # reset to default. Might be unnecessary. Evaluate later.
 
-    if headers:
+    if headers is not None:
         litellm.headers = None  # reset to default. Might be unnecessary. Evaluate later.
 
     if verbose:

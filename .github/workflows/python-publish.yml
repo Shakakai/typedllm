@@ -8,8 +8,6 @@ on:
     branches-ignore: [ "**" ]
     tags:
       - "v**"
-env:
-  OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
 
 jobs:
   build:
@@ -19,6 +17,8 @@ jobs:
     environment:
       name: release
       url: https://pypi.org/p/typedllm
+    env:
+      OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
     permissions:
       id-token: write
 
