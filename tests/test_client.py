@@ -8,6 +8,7 @@ from typedllm import (
     LLMRequest,
     LLMUserMessage,
     llm_request,
+    async_llm_request,
     create_tool_from_function
 )
 
@@ -27,7 +28,7 @@ async def test_basic_request(openai_key: str):
         ),
         force_text_response=True
     )
-    response = await llm_request(session, request)
+    session, response = await async_llm_request(session, request)
     assert response.message.content.index("1624") > -1
 
 
@@ -65,10 +66,14 @@ async def test_basic_tools_request(openai_key: str):
         ),
         required_tool=tool,
     )
-    session, response = await llm_request(session, request)
+    session, response = await async_llm_request(session, request)
     assert session
     assert response
     assert response.tool_calls[0].tool.name == "get_city_founding_history"
     assert response.tool_calls[0].arguments.city.index("New York") > -1
     assert response.tool_calls[0].arguments.year == 1624
 
+
+@pytest.mark.asyncio
+async def test_basic_lvm_request(openai_key: str):
+    pass

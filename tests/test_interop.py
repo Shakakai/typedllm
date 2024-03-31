@@ -1,9 +1,8 @@
 from typing import Callable
 
 import typedllm
-from typedllm.interop import litellm_request, ModelResponse
+from typedllm.interop import litellm_request, async_litellm_request
 from typedllm import LLMModel
-import litellm
 import pytest
 
 
@@ -24,7 +23,7 @@ async def test_basic_litellm_request(model: LLMModel, monkeypatch: pytest.Monkey
     tool_choice = {}
     verbose = False
 
-    response = await litellm_request(model, messages, tools, tool_choice, verbose)
+    response = await async_litellm_request(model, messages, tools, tool_choice, verbose)
     assert response == hi_acompletion, "Response should be the same as the fixture"
 
 
@@ -36,5 +35,5 @@ async def test_no_msg_error(openai_key: str, model: LLMModel):
     verbose = False
 
     with pytest.raises(ValueError):
-        await litellm_request(model, messages, tools, tool_choice, verbose)
+        await async_litellm_request(model, messages, tools, tool_choice, verbose)
         assert False, "Should not reach this point"

@@ -1,12 +1,12 @@
 import inspect
-from typing import Type, Callable, List
+from typing import Type, Callable, List, Optional
 from pydantic import BaseModel, Field
 
 
 class Tool(BaseModel):
     name: str = Field(description="The name of the tool")
     description: str = Field(description="A description of the tool")
-    function: Callable[[BaseModel], str] = Field(description="The function to call")
+    function: Optional[Callable[[BaseModel], str]] = Field(description="The function to call", default=None)
     parameter_type: Type[BaseModel] = Field(description="The type of the parameter for the function")
 
     def openai_tool_choice_json(self):
@@ -58,6 +58,26 @@ def create_tool_from_function(
         description=description,
         function=function,
         parameter_type=parameters_model
+    )
+
+
+def create_tool_from_model(
+        model: Type[BaseModel],
+        name: str = None,
+        description: str = None
+) -> Tool:
+    if name is None:
+        name = model.__name__
+
+    if description is None:
+        doc = model.__doc__
+        description = doc if doc is not None else f"Tool called {name}"
+
+    return Tool(
+        name=name,
+        description=description,
+        function=None,
+        parameter_type=model
     )
 
 
