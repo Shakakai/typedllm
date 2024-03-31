@@ -8,6 +8,8 @@ on:
     branches-ignore: [ "**" ]
     tags:
       - "v**"
+env:
+  OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
 
 jobs:
   build:

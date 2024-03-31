@@ -8,6 +8,8 @@ on:
     branches: [ "main" ]
   push:
     branches: [ "main" ]
+env:
+  OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
 
 jobs:
   build:
