@@ -17,8 +17,6 @@ jobs:
     environment:
       name: release
       url: https://pypi.org/p/typedllm
-    env:
-      OPENAI_API_KEY: ${{ vars.OPENAI_API_KEY }}
     permissions:
       id-token: write
 
@@ -41,6 +39,8 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         pytest
     - name: Build Package
