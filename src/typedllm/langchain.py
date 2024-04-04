@@ -11,7 +11,9 @@ def execute_request() -> RunnableLambda:
     async def __afunc__(input_data: dict):
         session = input_data.get("session")
         request = input_data.get("request")
-        request.message = input_data.get("prompt")
+        request.message = LLMUserMessage(
+            content=input_data.get("prompt")
+        )
         new_session, response = await async_llm_request(session, request)
         return {
             "session": new_session,
