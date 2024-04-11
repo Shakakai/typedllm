@@ -15,15 +15,13 @@ from .models import (
 
 from .client import llm_request, async_llm_request
 
-from .tool import create_tool_from_function, Tool, ToolCollection, create_tool_from_model
-
-from .langchain import execute_request
+from .tool import create_tool_from_function, Tool, ToolCollection
 
 __all__ = [
     'VERSION', 'version_short',
     'LLMRequest', 'LLMSession', 'LLMModel', 'LLMResponse',
     'LLMMessage', 'LLMUserMessage', 'LLMAssistantMessage', 'LLMToolResultMessage',
     'llm_request', 'async_llm_request',
-    'create_tool_from_function', 'Tool', 'ToolCollection', 'create_tool_from_model',
-    'TypedPrompt', 'execute_request'
+    'create_tool_from_function', 'Tool', 'ToolCollection',
+    'TypedPrompt'
 ]

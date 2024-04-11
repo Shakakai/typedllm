@@ -1,3 +1,4 @@
+import json
 from .interop import litellm_request, async_litellm_request
 from .tool import ToolCollection
 from .models import (
@@ -136,10 +137,12 @@ def extract_response_messages(res, tools: ToolCollection) -> LLMResponse:
     tool_calls = []
     if len(msg.tool_calls) > 0:
         for tool_call in msg["tool_calls"]:
+            ToolClz = tools.get_by_name(tool_call.function.name)
+            argument_dict = json.loads(tool_call.function.arguments)
+            tool = ToolClz(**argument_dict)
             tc = LLMAssistantToolCall(
                 id=tool_call.id,
-                tool=tools.get_by_name(tool_call.function.name),
-                args=tool_call.function.arguments
+                tool=tool
             )
             tool_calls.append(tc)
 

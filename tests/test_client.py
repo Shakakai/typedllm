@@ -1,3 +1,5 @@
+from typing import Type
+
 import pytest
 
 from pydantic import BaseModel, Field
@@ -9,7 +11,8 @@ from typedllm import (
     LLMUserMessage,
     llm_request,
     async_llm_request,
-    create_tool_from_function
+    create_tool_from_function,
+    Tool
 )
 
 
@@ -44,9 +47,10 @@ def get_city_founding_history(city: FoundingYear) -> str:
 
 
 def test_make_tool_from_function():
-    tool = create_tool_from_function(get_city_founding_history)
-    assert tool.name == "get_city_founding_history"
-    assert tool.parameter_type == FoundingYear
+    Tool = create_tool_from_function(get_city_founding_history)
+    assert Tool.__name__ == "get_city_founding_history"
+    assert "city" in Tool.model_fields
+    assert Tool.model_fields["city"].annotation == FoundingYear
 
 
 @pytest.mark.asyncio
@@ -55,7 +59,7 @@ async def test_basic_tools_request(openai_key: str):
         name="gpt-4",
         api_key=openai_key,
     )
-    tool = create_tool_from_function(get_city_founding_history)
+    tool: Type[Tool] = create_tool_from_function(get_city_founding_history)
     session = LLMSession(
         model=model,
         tools=[tool]
@@ -69,9 +73,9 @@ async def test_basic_tools_request(openai_key: str):
     session, response = await async_llm_request(session, request)
     assert session
     assert response
-    assert response.tool_calls[0].tool.name == "get_city_founding_history"
-    assert response.tool_calls[0].arguments.city.index("New York") > -1
-    assert response.tool_calls[0].arguments.year == 1624
+    assert response.tool_calls[0].tool.__class__.__name__ == "get_city_founding_history"
+    assert response.tool_calls[0].tool.city.city.index("New York") > -1
+    assert response.tool_calls[0].tool.city.year == 1624
 
 
 @pytest.mark.asyncio

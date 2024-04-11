@@ -1,29 +1,38 @@
 import inspect
-from typing import Type, Callable, List, Optional
-from pydantic import BaseModel, Field
+from typing import Type, Callable, List
+from pydantic import BaseModel, Field, create_model
 
 
 class Tool(BaseModel):
-    name: str = Field(description="The name of the tool")
-    description: str = Field(description="A description of the tool")
-    function: Optional[Callable[[BaseModel], str]] = Field(description="The function to call", default=None)
-    parameter_type: Type[BaseModel] = Field(description="The type of the parameter for the function")
+    """LLM Tool that can be used in a request"""
+    def __call__(self) -> any:
+        """
+        Implement this function to make the tool callable.
+        :return:
+        """
+        raise NotImplementedError("The __call__ method is not implemented for the Tool class.")
 
-    def openai_tool_choice_json(self):
+    @classmethod
+    def openai_tool_choice_json(cls):
         return {
             "type": "function",
             "function": {
-                "name": self.name,
+                "name": cls.__name__,
             }
         }
 
-    def openapi_json(self):
+    @classmethod
+    def openapi_json(cls):
+        description = cls.__doc__ or f"Tool called {cls.__name__}"
+        schema = cls.model_json_schema(mode="serialization")
+        schema.pop("title", None)
+        schema.pop("description", None)
         return {
             "type": "function",
             "function": {
-                "name": self.name,
-                "description": self.description,
-                "parameters": self.parameter_type.model_json_schema()
+                "name": cls.__name__,
+                "description": description,
+                "parameters": schema
             }
         }
 
@@ -33,52 +42,20 @@ StringClass = "a".__class__
 
 def create_tool_from_function(
         function: Callable,
-        name: str = None,
-        description: str = None
-) -> Tool:
+) -> Type[Tool]:
     sig = inspect.signature(function)
-    if sig.return_annotation != StringClass:
-        raise ValueError("The return value of the tool function must be a string.")
-
-    if len(sig.parameters.items()) != 1:
-        raise ValueError("The tool function must have exactly one parameter.")
-
-    parameter_key = list(sig.parameters.keys())[0]
-    parameters_model = sig.parameters[parameter_key].annotation
-
-    if name is None:
-        name = function.__name__
-
-    if description is None:
-        doc = function.__doc__
-        description = doc if doc is not None else f"Tool called {name}"
-
-    return Tool(
-        name=name,
-        description=description,
-        function=function,
-        parameter_type=parameters_model
+    annotations = {}
+    for name, param in sig.parameters.items():
+        if param.annotation is param.empty:
+            raise ValueError(f"Parameter {name} does not have a type hint")
+        annotations[name] = (param.annotation, Field(...))
+    ToolClz: Type[Tool] = create_model(
+        **annotations,
+        __model_name=function.__name__,
+        __base__=(Tool,),
+        __doc__=function.__doc__ or f"Tool called {function.__name__}"
     )
-
-
-def create_tool_from_model(
-        model: Type[BaseModel],
-        name: str = None,
-        description: str = None
-) -> Tool:
-    if name is None:
-        name = model.__name__
-
-    if description is None:
-        doc = model.__doc__
-        description = doc if doc is not None else f"Tool called {name}"
-
-    return Tool(
-        name=name,
-        description=description,
-        function=None,
-        parameter_type=model
-    )
+    return ToolClz
 
 
 class ToolCollection(List[Tool]):
@@ -90,6 +67,6 @@ class ToolCollection(List[Tool]):
 
     def get_by_name(self, name: str) -> Tool:
         for tool in self:
-            if tool.name == name:
+            if tool.__name__ == name:
                 return tool
         raise ValueError(f"Tool with name {name} not found.")

@@ -2,24 +2,18 @@ from pydantic import BaseModel
 from typedllm.tool import Tool, create_tool_from_function
 
 
+class TestTool(Tool):
+    value: int
+
+
 def test_basic_tool_creation():
-    class ArgType(BaseModel):
-        value: int
-
-    tool = Tool(
-        name="test",
-        description="test",
-        function=lambda x: str(x+1),
-        parameter_type=ArgType
-    )
-
-    result = tool.openapi_json()
+    result = TestTool.openapi_json()
 
     assert result == {
         "type": "function",
         "function": {
-            "name": "test",
-            "description": "test",
+            "name": "TestTool",
+            "description": "Tool called TestTool",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -28,7 +22,6 @@ def test_basic_tool_creation():
                         "type": "integer"
                     }
                 },
-                "title": "ArgType",
                 "required": ["value"]
             }
         }
@@ -36,15 +29,15 @@ def test_basic_tool_creation():
 
 
 def test_tool_creation_from_function():
-    class ArgType(BaseModel):
-        value: int
+    def test_function(value: int) -> str:
+        return str(value)
 
-    def test_function(x: ArgType) -> str:
-        return str(x.value+1)
+    FuncTool = create_tool_from_function(test_function)
 
-    tool = create_tool_from_function(test_function)
+    result = FuncTool.openapi_json()
 
-    result = tool.openapi_json()
+    assert FuncTool.__name__ == "test_function"
+    assert FuncTool.__doc__ == "Tool called test_function"
 
     assert result == {
         "type": "function",
@@ -59,7 +52,6 @@ def test_tool_creation_from_function():
                         "type": "integer"
                     }
                 },
-                "title": "ArgType",
                 "required": ["value"]
             }
         }

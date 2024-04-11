@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from typedllm import LLMModel, TypedPrompt, LLMSession, LLMRequest
+from typedllm import LLMModel, TypedPrompt, LLMSession, LLMRequest, Tool
 from typedtemplate import JinjaTemplateEngine
 from pydantic import Field
 
@@ -58,3 +58,12 @@ def get_session(model: LLMModel) -> LLMSession:
 @pytest.fixture(name="llmrequest")
 def get_request():
     return LLMRequest(force_text_response=True)
+
+
+@pytest.fixture(name="llmtool")
+def get_tool():
+    class CityFoundingTool(Tool):
+        """A tool to collect a city and its founding year."""
+        city_name: str = Field(description="The name of the city")
+        founded_year: int = Field(description="The year a city was founded")
+    return CityFoundingTool

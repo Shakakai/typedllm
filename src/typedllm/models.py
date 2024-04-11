@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional, Dict, Union, Any
+from typing import List, Optional, Dict, Union, Any, Type
 from pydantic import BaseModel, Field
 from .tool import Tool
 
@@ -56,15 +56,7 @@ class LLMUserMessage(LLMMessage):
 
 class LLMAssistantToolCall(LLMMessage):
     id: str = Field(description="The id of the tool call")
-    tool: Tool
-    args: str = Field(description="The arguments to the function")
-
-    @property
-    def arguments(self):
-        argument_dict = json.loads(self.args)
-        clz = self.tool.parameter_type
-        argument = clz(**argument_dict)
-        return argument
+    tool: Tool = Field(description="The tool used in the call")
 
     def openai_json(self):
         return {
@@ -132,7 +124,7 @@ class LLMModel(BaseModel):
 class LLMSession(BaseModel):
     model: Optional[LLMModel] = Field(description="The model used in the session", default=None)
     messages: List[LLMMessage] = Field(description="The messages in the session", default=[])
-    tools: List[Tool] = Field(description="The tools available in the session", default=[])
+    tools: List[Type[Tool]] = Field(description="The tools available in the session", default=[])
     verbose: bool = Field(description="Whether to log verbose output", default=False)
 
     def merge(self, other: 'LLMSession') -> 'LLMSession':
@@ -143,27 +135,15 @@ class LLMSession(BaseModel):
             verbose=self.verbose or other.verbose
         )
 
-    def to_runnable(self):
-        from langchain_core.runnables import RunnableLambda
-
-        def __inner__(input_data: dict):
-            input_data.pop("session", None)
-            return {
-                "session": self,
-                **input_data
-            }
-
-        return RunnableLambda(func=__inner__)
-
 
 class LLMRequest(BaseModel):
     message: Optional[LLMUserMessage] = Field(description="The prompt to use for the request", default=None)
     tool_results: List[LLMToolResultMessage] = Field(description="The tools to use for the request", default=[])
-    tools: List[Tool] = Field(
+    tools: List[Type[Tool]] = Field(
         description="The tools to use for the request in addition to the session tools.",
         default=[]
     )
-    required_tool: Optional[Tool] = Field(
+    required_tool: Optional[Type[Tool]] = Field(
         description="The tool that must be used for the request",
         default=None
     )
@@ -180,18 +160,6 @@ class LLMRequest(BaseModel):
             required_tool=self.required_tool or other.required_tool,
             force_text_response=self.force_text_response or other.force_text_response
         )
-
-    def to_runnable(self):
-        from langchain_core.runnables import RunnableLambda
-
-        def __inner__(input_data: dict):
-            input_data.pop("request", None)
-            return {
-                "request": self,
-                **input_data
-            }
-
-        return RunnableLambda(func=__inner__)
 
 
 class LLMResponse(BaseModel):
