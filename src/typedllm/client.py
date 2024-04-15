@@ -164,7 +164,8 @@ def typed_request(model: LLMModel, template: Type[TypedTemplate], tool: Type[Too
         message=LLMUserMessage(content=msg)
     )
     _, response = request(session, req)
-    return response
+    tool_response = response.tool_calls[0].tool
+    return tool_response
 
 
 async def async_typed_request(model: LLMModel, template: Type[TypedTemplate], tool: Type[Tool], **kwargs):
@@ -176,4 +177,5 @@ async def async_typed_request(model: LLMModel, template: Type[TypedTemplate], to
         message=LLMUserMessage(content=msg)
     )
     _, response = await async_request(session, req)
-    return response
+    tool_response = response.tool_calls[0].tool
+    return tool_response

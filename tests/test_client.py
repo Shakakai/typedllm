@@ -80,7 +80,7 @@ async def test_basic_tools_request(openai_key: str):
 
 
 @pytest.mark.asyncio
-async def test_basic_lvm_request(openai_key: str, llmprompt):
+async def test_typed_request(openai_key: str, llmprompt):
     class Year(Tool):
         year: int = Field(description="The year of the city's founding")
 
@@ -88,7 +88,7 @@ async def test_basic_lvm_request(openai_key: str, llmprompt):
         name="gpt-4",
         api_key=openai_key,
     )
-    response = typed_request(model, llmprompt, Year, city="New York")
-    assert response
-    assert response.tool_calls[0].tool.__class__.__name__ == "Year"
-    assert response.tool_calls[0].tool.year == 1624
+    tool = typed_request(model, llmprompt, Year, city="New York")
+    assert tool
+    assert tool.__class__.__name__ == "Year"
+    assert tool.year == 1624
