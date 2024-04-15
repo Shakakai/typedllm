@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from typedllm import LLMModel, TypedPrompt, LLMSession, LLMRequest, Tool
+from typedllm import LLMModel, TypedPrompt, LLMSession, LLMRequest, Tool, create_tool_from_function
 from typedtemplate import JinjaTemplateEngine
 from pydantic import Field
 
@@ -67,3 +67,17 @@ def get_tool():
         city_name: str = Field(description="The name of the city")
         founded_year: int = Field(description="The year a city was founded")
     return CityFoundingTool
+
+
+@pytest.fixture(name="FuncTool")
+def get_function_tool():
+    def TestTool(value: int) -> str:
+        return str(value)
+    return create_tool_from_function(TestTool)
+
+
+@pytest.fixture(name="ClassTool")
+def get_class_tool():
+    class TestTool(Tool):
+        value: int
+    return TestTool

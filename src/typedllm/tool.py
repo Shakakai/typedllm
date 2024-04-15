@@ -23,18 +23,21 @@ class Tool(BaseModel):
 
     @classmethod
     def openapi_json(cls):
+        name = cls.__name__
         description = cls.__doc__ or f"Tool called {cls.__name__}"
-        schema = cls.model_json_schema(mode="serialization")
-        schema.pop("title", None)
-        schema.pop("description", None)
-        return {
+        if cls.__doc__ is None:
+            # Patch docstring so Tool classes and functions act the same. See unit tests.
+            cls.__doc__ = description
+        schema = cls.model_json_schema()
+        result = {
             "type": "function",
             "function": {
-                "name": cls.__name__,
+                "name": name,
                 "description": description,
                 "parameters": schema
             }
         }
+        return result
 
 
 StringClass = "a".__class__

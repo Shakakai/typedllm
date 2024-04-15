@@ -1,30 +1,34 @@
 import json
+from typing import Type
+
+from typedtemplate import TypedTemplate
+
 from .interop import litellm_request, async_litellm_request
-from .tool import ToolCollection
+from .tool import ToolCollection, Tool
 from .models import (
     LLMSession,
     LLMRequest,
     LLMResponse,
     LLMAssistantMessage,
-    LLMAssistantToolCall
+    LLMAssistantToolCall, LLMModel, LLMUserMessage
 )
 
 
-async def async_llm_request(
+async def async_request(
         session: LLMSession,
-        request: LLMRequest
+        req: LLMRequest
 ) -> (LLMSession, LLMResponse):
     # TODO: Add support for a Memory Interface here.
     # Memory can be set as a configuration option and can be invoked here.
     messages = generate_message_json(
         *session.messages,
-        *request.tool_results,
-        request.message
+        *req.tool_results,
+        req.message
     )
     tools, tool_choice = generate_tool_json(
-        *session.tools, *request.tools,
-        force_text_response=request.force_text_response,
-        required_tool=request.required_tool
+        *session.tools, *req.tools,
+        force_text_response=req.force_text_response,
+        required_tool=req.required_tool
     )
     raw_response = await async_litellm_request(
         session.model.ssl_verify,
@@ -46,7 +50,6 @@ async def async_llm_request(
         for tool_call in response.tool_calls:
             session.messages.append(tool_call)
 
-
     # Add messages to the session
     if response.message:
         session.messages.append(response.message)
@@ -54,21 +57,21 @@ async def async_llm_request(
     return session, response
 
 
-def llm_request(
+def request(
         session: LLMSession,
-        request: LLMRequest
+        req: LLMRequest
 ) -> (LLMSession, LLMResponse):
     # TODO: Add support for a Memory Interface here.
     # Memory can be set as a configuration option and can be invoked here.
     messages = generate_message_json(
         *session.messages,
-        *request.tool_results,
-        request.message
+        *req.tool_results,
+        req.message
     )
     tools, tool_choice = generate_tool_json(
-        *session.tools, *request.tools,
-        force_text_response=request.force_text_response,
-        required_tool=request.required_tool
+        *session.tools, *req.tools,
+        force_text_response=req.force_text_response,
+        required_tool=req.required_tool
     )
     raw_response = litellm_request(
         session.model.ssl_verify,
@@ -89,7 +92,6 @@ def llm_request(
     if response.tool_calls and len(response.tool_calls) > 0:
         for tool_call in response.tool_calls:
             session.messages.append(tool_call)
-
 
     # Add messages to the session
     if response.message:
@@ -151,3 +153,27 @@ def extract_response_messages(res, tools: ToolCollection) -> LLMResponse:
         tool_calls=tool_calls,
         raw=response
     )
+
+
+def typed_request(model: LLMModel, template: Type[TypedTemplate], tool: Type[Tool], **kwargs):
+    msg = template(**kwargs).render()
+    session = LLMSession(model=model)
+    req = LLMRequest(
+        tools=[tool],
+        required_tool=tool,
+        message=LLMUserMessage(content=msg)
+    )
+    _, response = request(session, req)
+    return response
+
+
+async def async_typed_request(model: LLMModel, template: Type[TypedTemplate], tool: Type[Tool], **kwargs):
+    msg = template(**kwargs).render()
+    session = LLMSession(model=model)
+    req = LLMRequest(
+        tools=[tool],
+        required_tool=tool,
+        message=LLMUserMessage(content=msg)
+    )
+    _, response = await async_request(session, req)
+    return response

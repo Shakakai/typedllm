@@ -13,7 +13,7 @@ from .models import (
     LLMToolResultMessage
 )
 
-from .client import llm_request, async_llm_request
+from .client import request, async_request
 
 from .tool import create_tool_from_function, Tool, ToolCollection
 
@@ -21,7 +21,7 @@ __all__ = [
     'VERSION', 'version_short',
     'LLMRequest', 'LLMSession', 'LLMModel', 'LLMResponse',
     'LLMMessage', 'LLMUserMessage', 'LLMAssistantMessage', 'LLMToolResultMessage',
-    'llm_request', 'async_llm_request',
+    'request', 'async_request',
     'create_tool_from_function', 'Tool', 'ToolCollection',
     'TypedPrompt'
 ]
