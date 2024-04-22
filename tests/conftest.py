@@ -1,8 +1,10 @@
+from typing import ClassVar
+
 import os
 import pytest
 
 from typedllm import LLMModel, TypedPrompt, LLMSession, LLMRequest, Tool, create_tool_from_function
-from typedtemplate import JinjaTemplateEngine
+from typedtemplate import JinjaTemplateEngine, TypedTemplate
 from pydantic import Field
 
 
@@ -39,13 +41,30 @@ def get_template_engine():
 
 @pytest.fixture(name="llmprompt")
 def get_prompt(jinja_engine: JinjaTemplateEngine):
-    class PromptTemplate(TypedPrompt):
+    class PromptTemplate(TypedTemplate):
         template_engine = jinja_engine
         template_string = "What year was {{ city }} founded?"
         city: str = Field(description="The city to use in the prompt")
 
     return PromptTemplate
 
+
+@pytest.fixture(name="instruction_template")
+def get_instruction_template(jinja_engine: JinjaTemplateEngine):
+    class InstructionTemplate(TypedTemplate):
+        template_engine = jinja_engine
+        template_string = "What year was {{ city }} founded?"
+        city: str = Field(description="City name")
+    return InstructionTemplate
+
+
+@pytest.fixture(name="context_template")
+def get_context_template(jinja_engine: JinjaTemplateEngine):
+    class ContextTemplate(TypedTemplate):
+        template_engine = jinja_engine
+        template_string = "User Name: {{ username }}"
+        username: str = Field(description="User's name")
+    return ContextTemplate
 
 @pytest.fixture(name="llmsession")
 def get_session(model: LLMModel) -> LLMSession:

@@ -3,7 +3,7 @@ from __future__ import annotations as _annotations
 
 __all__ = 'VERSION', 'version_short'
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 """The version of TypedLLM."""
 
 
