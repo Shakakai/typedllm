@@ -1,5 +1,5 @@
 import json
-from typing import Type, List
+from typing import Type, List, Optional
 
 import pydantic
 from typedtemplate import TypedTemplate
@@ -127,7 +127,7 @@ def generate_tool_json(*tools, force_text_response=False, required_tool=None):
     return tools, tool_choice
 
 
-def extract_assistant_message(res) -> LLMAssistantMessage | None:
+def extract_assistant_message(res) -> Optional[LLMAssistantMessage]:
     from litellm.utils import ModelResponse
     response: ModelResponse = res
 
