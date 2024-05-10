@@ -1,6 +1,7 @@
 import json
-from typing import Type
+from typing import Type, List
 
+import pydantic
 from typedtemplate import TypedTemplate
 
 from .interop import litellm_request, async_litellm_request
@@ -43,17 +44,17 @@ async def async_request(
         organization=session.model.organization,
         api_base=session.model.api_base
     )
-    response = extract_response_messages(raw_response, tools)
 
-    # Add tool calls to session messsages
-    if response.tool_calls and len(response.tool_calls) > 0:
-        for tool_call in response.tool_calls:
-            session.messages.append(tool_call)
+    # This is broken out to support sync/async code paths in the tool calls section
+    assistant_message = extract_assistant_message(raw_response)
+    tools_calls = await async_extract_tool_calls(raw_response, tools, session)
+    response = LLMResponse(
+        message=assistant_message,
+        tool_calls=tools_calls,
+        raw=raw_response
+    )
 
-    # Add messages to the session
-    if response.message:
-        session.messages.append(response.message)
-
+    update_session(session, response)
     return session, response
 
 
@@ -86,8 +87,21 @@ def request(
         organization=session.model.organization,
         api_base=session.model.api_base
     )
-    response = extract_response_messages(raw_response, tools)
 
+    # This is broken out to support sync/async code paths in the tool calls section
+    assistant_message = extract_assistant_message(raw_response)
+    tools_calls = sync_extract_tool_calls(raw_response, tools, session)
+    response = LLMResponse(
+        message=assistant_message,
+        tool_calls=tools_calls,
+        raw=raw_response
+    )
+
+    update_session(session, response)
+    return session, response
+
+
+def update_session(session: LLMSession, response: LLMResponse) -> None:
     # Add tool calls to session messsages
     if response.tool_calls and len(response.tool_calls) > 0:
         for tool_call in response.tool_calls:
@@ -96,8 +110,6 @@ def request(
     # Add messages to the session
     if response.message:
         session.messages.append(response.message)
-
-    return session, response
 
 
 def generate_message_json(*messages):
@@ -115,7 +127,7 @@ def generate_tool_json(*tools, force_text_response=False, required_tool=None):
     return tools, tool_choice
 
 
-def extract_response_messages(res, tools: ToolCollection) -> LLMResponse:
+def extract_assistant_message(res) -> LLMAssistantMessage | None:
     from litellm.utils import ModelResponse
     response: ModelResponse = res
 
@@ -126,33 +138,61 @@ def extract_response_messages(res, tools: ToolCollection) -> LLMResponse:
 
     if msg["role"] != "assistant":
         raise Exception("Invalid role in response")
-    llm_msg = None
     if msg.content:
-        llm_msg = LLMAssistantMessage(
+        return LLMAssistantMessage(
             content=msg.content,
         )
-    if not hasattr(msg, "tool_calls"):
-        return LLMResponse(
-            message=llm_msg,
-            raw=response
-        )
+    return None
+
+
+async def async_extract_tool_calls(
+        res,  # LiteLLM Response
+        tools: ToolCollection,
+        session: LLMSession,
+        max_depth: int = 3
+) -> List[LLMAssistantToolCall]:
+    msg = res.choices[0].message
     tool_calls = []
-    if len(msg.tool_calls) > 0:
+    if hasattr(msg, "tool_calls") and len(msg.tool_calls) > 0:
         for tool_call in msg["tool_calls"]:
             ToolClz = tools.get_by_name(tool_call.function.name)
-            argument_dict = json.loads(tool_call.function.arguments)
-            tool = ToolClz(**argument_dict)
+            tool = await async_tool_from_json_str(
+                session,
+                tool_call.function.arguments,
+                ToolClz,
+                max_depth=max_depth
+            )
             tc = LLMAssistantToolCall(
                 id=tool_call.id,
                 tool=tool
             )
             tool_calls.append(tc)
+    return tool_calls
 
-    return LLMResponse(
-        message=llm_msg,
-        tool_calls=tool_calls,
-        raw=response
-    )
+
+def sync_extract_tool_calls(
+        res,
+        tools: ToolCollection,
+        session: LLMSession,
+        max_depth: int = 3
+) -> List[LLMAssistantToolCall]:
+    msg = res.choices[0].message
+    tool_calls = []
+    if hasattr(msg, "tool_calls") and len(msg.tool_calls) > 0:
+        for tool_call in msg["tool_calls"]:
+            ToolClz = tools.get_by_name(tool_call.function.name)
+            tool = sync_tool_from_json_str(
+                session,
+                tool_call.function.arguments,
+                ToolClz,
+                max_depth=max_depth
+            )
+            tc = LLMAssistantToolCall(
+                id=tool_call.id,
+                tool=tool
+            )
+            tool_calls.append(tc)
+    return tool_calls
 
 
 def typed_request(model: LLMModel, template: Type[TypedTemplate], tool: Type[Tool], **kwargs):
@@ -179,3 +219,95 @@ async def async_typed_request(model: LLMModel, template: Type[TypedTemplate], to
     _, response = await async_request(session, req)
     tool_response = response.tool_calls[0].tool
     return tool_response
+
+
+async def async_tool_from_json_str(session: LLMSession, json_str: str, ToolClz: Type[Tool], depth: int = 0, max_depth: int = 3) -> Tool:
+    try:
+        argument_dict = json.loads(json_str)
+        tool = ToolClz(**argument_dict)
+        return tool
+    except (json.JSONDecodeError, pydantic.ValidationError) as e:
+        if depth >= max_depth:
+            raise Exception("Invalid Tool JSON. Max depth reached.")
+
+        msg = f"""# Instructions
+        You must fix the invalid JSON provided to match the tool.
+        Use the error message below to fix the JSON.
+        
+        # JSON
+        {json_str}
+        
+        # Error
+        {str(e)}
+        """
+        tools, tool_choice = generate_tool_json(
+            ToolClz,
+            force_text_response=False,
+            required_tool=ToolClz
+        )
+        response = await async_litellm_request(
+            session.model.ssl_verify,
+            session.model.name,
+            session.model.max_retries,
+            session.model.api_key,
+            generate_message_json(LLMUserMessage(content=msg)),
+            tools.openapi_json(),
+            tool_choice,
+            verbose=session.verbose,
+            headers=session.model.headers,
+            organization=session.model.organization,
+            api_base=session.model.api_base
+        )
+        return await async_tool_from_json_str(
+            session,
+            response.choices[0].message.tool_calls[0].function.arguments,
+            ToolClz,
+            depth + 1,
+            max_depth
+        )
+
+
+def sync_tool_from_json_str(session: LLMSession, json_str: str, ToolClz: Type[Tool], depth: int = 0, max_depth: int = 3) -> Tool:
+    try:
+        argument_dict = json.loads(json_str)
+        tool = ToolClz(**argument_dict)
+        return tool
+    except (json.JSONDecodeError, pydantic.ValidationError) as e:
+        if depth >= max_depth:
+            raise Exception("Invalid Tool JSON. Max depth reached.")
+
+        msg = f"""# Instructions
+        You must fix the invalid JSON provided to match the tool.
+        Use the error message below to fix the JSON.
+
+        # JSON
+        {json_str}
+
+        # Error
+        {str(e)}
+        """
+        tools, tool_choice = generate_tool_json(
+            ToolClz,
+            force_text_response=False,
+            required_tool=ToolClz
+        )
+        response = litellm_request(
+            session.model.ssl_verify,
+            session.model.name,
+            session.model.max_retries,
+            session.model.api_key,
+            generate_message_json(LLMUserMessage(content=msg)),
+            tools.openapi_json(),
+            tool_choice,
+            verbose=session.verbose,
+            headers=session.model.headers,
+            organization=session.model.organization,
+            api_base=session.model.api_base
+        )
+        return sync_tool_from_json_str(
+            session,
+            response.choices[0].message.tool_calls[0].function.arguments,
+            ToolClz,
+            depth + 1,
+            max_depth
+        )

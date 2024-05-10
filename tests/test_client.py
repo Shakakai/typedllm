@@ -14,7 +14,7 @@ from typedllm import (
     create_tool_from_function,
     Tool
 )
-from typedllm.client import typed_request
+from typedllm.client import typed_request, async_tool_from_json_str, sync_tool_from_json_str
 
 
 @pytest.mark.asyncio
@@ -92,3 +92,33 @@ async def test_typed_request(openai_key: str, llmprompt):
     assert tool
     assert tool.__class__.__name__ == "Year"
     assert tool.year == 1624
+
+
+@pytest.mark.asyncio
+async def test_async_tool_from_json_str(llmsession: LLMSession):
+    broken_json_str = '{"year": 1624, "city": "New York"'
+    result = await async_tool_from_json_str(llmsession, broken_json_str, CityFoundingInfo)
+    assert result.year == 1624
+    assert result.city == "New York"
+
+
+@pytest.mark.asyncio
+async def test_async_tool_from_json_str_missing_commas(llmsession: LLMSession):
+    broken_json_str = '{"year": 1624 "city": "New York"}'
+    result = await async_tool_from_json_str(llmsession, broken_json_str, CityFoundingInfo)
+    assert result.year == 1624
+    assert result.city == "New York"
+
+
+def test_tool_from_json_str(llmsession: LLMSession):
+    broken_json_str = '{"year": 1624, "city": "New York"'
+    result = sync_tool_from_json_str(llmsession, broken_json_str, CityFoundingInfo)
+    assert result.year == 1624
+    assert result.city == "New York"
+
+
+def test_tool_from_json_str_missing_commas(llmsession: LLMSession):
+    broken_json_str = '{"year": 1624 "city": "New York"}'
+    result = sync_tool_from_json_str(llmsession, broken_json_str, CityFoundingInfo)
+    assert result.year == 1624
+    assert result.city == "New York"

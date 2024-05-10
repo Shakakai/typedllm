@@ -61,14 +61,14 @@ def create_tool_from_function(
     return ToolClz
 
 
-class ToolCollection(List[Tool]):
+class ToolCollection(List[Type[Tool]]):
     def __init__(self, *args):
         super().__init__(args)
 
     def openapi_json(self):
         return [tool.openapi_json() for tool in self]
 
-    def get_by_name(self, name: str) -> Tool:
+    def get_by_name(self, name: str) -> Type[Tool]:
         for tool in self:
             if tool.__name__ == name:
                 return tool
