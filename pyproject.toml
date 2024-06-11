@@ -14,7 +14,6 @@ requires-python = ">=3.9"
 readme = "README.md"
 license = {text = "MIT"}
 dynamic = ["version"]
-packages = ["src/typedllm"]
 
 [build-system]
 requires = ["hatchling"]
@@ -33,6 +32,9 @@ include = [
     '/tests',
     '/requirements',
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/typedllm"]
 
 [tool.pdm]
 distribution = true
