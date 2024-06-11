@@ -164,7 +164,8 @@ async def async_extract_tool_calls(
             )
             tc = LLMAssistantToolCall(
                 id=tool_call.id,
-                tool=tool
+                tool=tool,
+                args=tool_call.function.arguments
             )
             tool_calls.append(tc)
     return tool_calls
@@ -189,7 +190,8 @@ def sync_extract_tool_calls(
             )
             tc = LLMAssistantToolCall(
                 id=tool_call.id,
-                tool=tool
+                tool=tool,
+                args=tool_call.function.arguments
             )
             tool_calls.append(tc)
     return tool_calls

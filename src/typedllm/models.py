@@ -57,6 +57,7 @@ class LLMUserMessage(LLMMessage):
 class LLMAssistantToolCall(LLMMessage):
     id: str = Field(description="The id of the tool call")
     tool: Tool = Field(description="The tool used in the call")
+    args: str = Field(description="The arguments used in the tool call")
 
     def openai_json(self):
         return {
