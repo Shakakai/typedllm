@@ -139,7 +139,7 @@ class LLMSession(BaseModel):
 
 class LLMRequest(BaseModel):
     message: Optional[LLMUserMessage] = Field(description="The prompt to use for the request", default=None)
-    tool_results: List[LLMToolResultMessage] = Field(description="The tools to use for the request", default=[])
+    tool_results: List[LLMToolResultMessage] = Field(description="Tool results for this request", default=[])
     tools: List[Type[Tool]] = Field(
         description="The tools to use for the request in addition to the session tools.",
         default=[]
