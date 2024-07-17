@@ -167,3 +167,12 @@ class LLMResponse(BaseModel):
     message: Optional[LLMAssistantMessage] = Field(description="The message from the assistant", default=None)
     tool_calls: List[LLMAssistantToolCall] = Field(description="The tools to use for the request", default=[])
     raw: BaseModel = Field(description="The raw response from the model provider")
+
+    def generate_tool_results(self, session: Optional[LLMSession] = None) -> None:
+        for tool_call in self.tool_calls:
+            result = LLMToolResultMessage(
+                id=tool_call.id,
+                content=tool_call.tool()
+            )
+            if session:
+                session.messages.append(result)

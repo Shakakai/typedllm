@@ -52,11 +52,18 @@ def create_tool_from_function(
         if param.annotation is param.empty:
             raise ValueError(f"Parameter {name} does not have a type hint")
         annotations[name] = (param.annotation, Field(...))
+
+    def call_function(self):
+        item_name = list(self.model_fields_set)[0]
+        value = getattr(self, item_name)
+        return function(value)
+
     ToolClz: Type[Tool] = create_model(
         function.__name__,
         **annotations,
         __base__=(Tool,),
-        __doc__=function.__doc__ or f"Tool called {function.__name__}"
+        __doc__=function.__doc__ or f"Tool called {function.__name__}",
+        __call__=call_function
     )
     return ToolClz
 

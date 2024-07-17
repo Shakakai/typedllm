@@ -77,6 +77,8 @@ async def test_basic_tools_request(openai_key: str):
     assert response.tool_calls[0].tool.__class__.__name__ == "get_city_founding_history"
     assert response.tool_calls[0].tool.city_info.city.index("New York") > -1
     assert response.tool_calls[0].tool.city_info.year == 1624
+    response.generate_tool_results(session)
+    assert session.messages[-1].content.index("Historical weather for New York") > -1
 
 
 @pytest.mark.asyncio
