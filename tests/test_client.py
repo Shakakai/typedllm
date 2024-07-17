@@ -42,14 +42,14 @@ class CityFoundingInfo(Tool):
     city: str = Field(description="The name of the city.")
 
 
-def get_city_founding_history(city_info: CityFoundingInfo) -> str:
+def get_history_weather(city_info: CityFoundingInfo) -> str:
     return (f"Historical weather for {city_info.city} since its founding in {city_info.year}. "
             f"The weather is very nice. Average 80 degrees F.")
 
 
 def test_make_tool_from_function():
-    Tool = create_tool_from_function(get_city_founding_history)
-    assert Tool.__name__ == "get_city_founding_history"
+    Tool = create_tool_from_function(get_history_weather)
+    assert Tool.__name__ == "get_history_weather"
     assert "city_info" in Tool.model_fields
     assert Tool.model_fields["city_info"].annotation == CityFoundingInfo
 
@@ -60,21 +60,21 @@ async def test_basic_tools_request(openai_key: str):
         name="gpt-4",
         api_key=openai_key,
     )
-    tool: Type[Tool] = create_tool_from_function(get_city_founding_history)
+    tool: Type[Tool] = create_tool_from_function(get_history_weather)
     session = LLMSession(
         model=model,
         tools=[tool]
     )
     request = LLMRequest(
         message=LLMUserMessage(
-            content="What is the founding story of New York City?",
+            content="When New York City was founded in 1624, what was the weather like?",
         ),
         required_tool=tool,
     )
     session, response = await async_request(session, request)
     assert session
     assert response
-    assert response.tool_calls[0].tool.__class__.__name__ == "get_city_founding_history"
+    assert response.tool_calls[0].tool.__class__.__name__ == "get_history_weather"
     assert response.tool_calls[0].tool.city_info.city.index("New York") > -1
     assert response.tool_calls[0].tool.city_info.year == 1624
     response.generate_tool_results(session)
