@@ -153,7 +153,10 @@ async def async_extract_tool_calls(
 ) -> List[LLMAssistantToolCall]:
     msg = res.choices[0].message
     tool_calls = []
-    if hasattr(msg, "tool_calls") and len(msg.tool_calls) > 0:
+    if (hasattr(msg, "tool_calls") and
+            msg.tool_calls is not None
+            and len(msg.tool_calls) > 0
+    ):
         for tool_call in msg["tool_calls"]:
             ToolClz = tools.get_by_name(tool_call.function.name)
             tool = await async_tool_from_json_str(
